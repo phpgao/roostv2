@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>roost — Terminal TUI Session Manager</title>
+  <meta name="description" content="A terminal TUI session manager for AI coding assistants. Browse, search, resume, and delete CodeBuddy, Claude, Gemini, Codex, Copilot, and OpenCode sessions — all without leaving the shell.">
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --surface: #11161e;
+      --border: #1c2333;
+      --text: #c8d2e0;
+      --muted: #546178;
+      --accent: #39ff14;
+      --accent-dim: #1a5c1a;
+      --warn: #ef4444;
+      --code-bg: #080c12;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* header */
+    .header {
+      text-align: center;
+      padding: 3rem 0 2rem;
+    }
+    .logo {
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+    }
+    .tagline {
+      color: var(--muted);
+      font-size: 1.1rem;
+      margin-top: 0.5rem;
+    }
+
+    /* badge bar */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-cb { background: #39ff14; }
+    .dot-cl { background: #ff8c00; }
+    .dot-ge { background: #8b5cf6; }
+    .dot-cx { background: #06b6d4; }
+    .dot-cp { background: #10b981; }
+    .dot-oc { background: #f59e0b; }
+
+    /* section */
+    .section { margin: 2.5rem 0; }
+    .section h2 {
+      color: var(--accent);
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section h2::before { content: "▸ "; }
+
+    /* card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .card p { margin-bottom: 0.6rem; }
+
+    /* feature grid */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.8rem;
+    }
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+    }
+    .feature .icon { color: var(--accent); margin-right: 0.4rem; }
+
+    /* code block */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    code { color: var(--accent); }
+
+    /* table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0; }
+    th, td {
+      padding: 0.5rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: var(--surface);
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+    tr:hover td { background: rgba(57, 255, 20, 0.03); }
+
+    /* keyboard shortcuts grid */
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+    .key-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+    }
+    .kbd {
+      display: inline-block;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.8rem;
+      color: var(--accent);
+      min-width: 1.8rem;
+      text-align: center;
+    }
+    .kbd-wide { min-width: 3rem; }
+
+    /* install buttons */
+    .install-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+    .install-btn {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .install-btn:hover {
+      border-color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* footer */
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      padding: 2rem 0;
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">roost</div>
+      <div class="tagline">Terminal TUI Session Manager for AI Coding Assistants</div>
+      <div class="badges">
+        <span class="badge"><span class="dot dot-cb"></span> CodeBuddy</span>
+        <span class="badge"><span class="dot dot-cl"></span> Claude</span>
+        <span class="badge"><span class="dot dot-ge"></span> Gemini</span>
+        <span class="badge"><span class="dot dot-cx"></span> Codex</span>
+        <span class="badge"><span class="dot dot-cp"></span> Copilot</span>
+        <span class="badge"><span class="dot dot-oc"></span> OpenCode</span>
+      </div>
+    </header>
+
+    <div class="section">
+      <h2>Install</h2>
+      <div class="install-row">
+        <a href="#" class="install-btn"><code>brew install phpgao/tap/roost</code></a>
+        <a href="#" class="install-btn"><code>go install github.com/phpgao/roost@latest</code></a>
+      </div>
+      <p style="color: var(--muted); font-size: 0.85rem;">Requires Go 1.26+</p>
+    </div>
+
+    <div class="section">
+      <h2>Features</h2>
+      <div class="features">
+        <div class="feature"><span class="icon">◉</span> Splash screen with animated logo</div>
+        <div class="feature"><span class="icon">◉</span> Project + session list views</div>
+        <div class="feature"><span class="icon">◉</span> Vim-style keyboard navigation</div>
+        <div class="feature"><span class="icon">◉</span> Session detail &amp; manual commands</div>
+        <div class="feature"><span class="icon">◉</span> Batch select / delete</div>
+        <div class="feature"><span class="icon">◉</span> Search with real-time filtering</div>
+        <div class="feature"><span class="icon">◉</span> Platform filter (Tab)</div>
+        <div class="feature"><span class="icon">◉</span> Custom agent support</div>
+        <div class="feature"><span class="icon">◉</span> Responsive layout</div>
+        <div class="feature"><span class="icon">◉</span> 1-minute auto-refresh</div>
+        <div class="feature"><span class="icon">◉</span> CLI subcommands</div>
+        <div class="feature"><span class="icon">◉</span> Cyberpunk dark theme</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Keyboard Shortcuts</h2>
+      <div class="keys">
+        <div class="key-item"><span class="kbd">?/k</span> Move up / down</div>
+        <div class="key-item"><span class="kbd">g</span> / <span class="kbd">G</span> First / last item</div>
+        <div class="key-item"><span class="kbd kbd-wide">Enter</span> Open project / Resume session</div>
+        <div class="key-item"><span class="kbd">n</span> New session (agent picker)</div>
+        <div class="key-item"><span class="kbd">Esc</span> Back / Double-tap to quit</div>
+        <div class="key-item"><span class="kbd">/</span> Search</div>
+        <div class="key-item"><span class="kbd">d</span> Delete current item</div>
+        <div class="key-item"><span class="kbd">x</span> Delete project (session view)</div>
+        <div class="key-item"><span class="kbd kbd-wide">Space</span> Batch select / Toggle</div>
+        <div class="key-item"><span class="kbd kbd-wide">D</span> Batch delete selected</div>
+        <div class="key-item"><span class="kbd kbd-wide">Tab</span> Cycle platform filter</div>
+        <div class="key-item"><span class="kbd">r</span> Refresh</div>
+        <div class="key-item"><span class="kbd">?</span> Full keybinding list</div>
+        <div class="key-item"><span class="kbd">q</span> / <span class="kbd kbd-wide">Ctrl+C</span> Quit</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Quick Start</h2>
+      <pre><code>$ roost              <span style="color: var(--muted)"># Launch interactive TUI</span>
+$ roost list         <span style="color: var(--muted)"># List all projects</span>
+$ roost list -t session -p /path/to/repo   <span style="color: var(--muted)"># List sessions</span>
+$ roost resume -s &lt;session-id&gt;             <span style="color: var(--muted)"># Resume a session</span>
+$ roost delete -s &lt;session-id&gt;             <span style="color: var(--muted)"># Delete a session</span></code></pre>
+    </div>
+
+    <div class="section">
+      <h2>Configuration</h2>
+      <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem;">Edit <code>~/.roost/roost.yaml</code></p>
+      <pre><code><span style="color: var(--muted)"># resume mode: replace (default) or suspend</span>
+resume_mode: suspend
+
+platforms:
+  codebuddy:
+    args: [-y]
+  claude:
+    args: [--dangerously-skip-permissions]
+
+<span style="color: var(--muted)"># Custom agents with alternative binaries</span>
+custom_agents:
+  - name: claude-dev
+    type: claude
+    bin: claude-dev
+    data_dir: .claude-dev
+    args: [--no-permissions-check]</code></pre>
+    </div>
+
+    <footer class="footer">
+      <p><a href="https://github.com/phpgao/roost">github.com/phpgao/roost</a> &mdash; MIT License</p>
+    </footer>
+  </div>
+</body>
+</html>

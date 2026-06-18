@@ -1,0 +1,8 @@
+roost
+*.test
+coverage.out
+*.prof
+dist/
+vendor/
+.idea/
+roostv2
