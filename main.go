@@ -12,7 +12,7 @@ import (
 
 // 版本信息
 var (
-	Version   = "v2.0.0"
+	Version   = "dev"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
