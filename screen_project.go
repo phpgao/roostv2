@@ -145,12 +145,20 @@ func (c *ProjectScreen) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 		}
 
 	case "up", "k":
-		if c.cursor > 0 {
-			c.cursor--
+		if len(c.filtered) > 0 {
+			if c.cursor > 0 {
+				c.cursor--
+			} else {
+				c.cursor = len(c.filtered) - 1
+			}
 		}
 	case "down", "j":
-		if c.cursor < len(c.filtered)-1 {
-			c.cursor++
+		if len(c.filtered) > 0 {
+			if c.cursor < len(c.filtered)-1 {
+				c.cursor++
+			} else {
+				c.cursor = 0
+			}
 		}
 	case "g":
 		c.cursor = 0
@@ -376,7 +384,8 @@ func (c *ProjectScreen) View(width, height int) string {
 				if platColW < 15 {
 					platParts = append(platParts, PlatformStyleName(plat).Render(plat.Icon()))
 				} else {
-					platParts = append(platParts, fmt.Sprintf("%s %d",
+					platParts = append(platParts, fmt.Sprintf(
+						"%s %d",
 						PlatformStyleName(plat).Render(plat.Icon()),
 						n,
 					))
@@ -445,7 +454,8 @@ func (c *ProjectScreen) View(width, height int) string {
 	} else {
 		scroll := scrollHint(start, end, len(c.filtered), c.cursor)
 		if c.selecting {
-			fmt.Fprintf(&sb, "  %s toggle  %s delete(%d)  %s cancel%s\n",
+			fmt.Fprintf(
+				&sb, "  %s toggle  %s delete(%d)  %s cancel%s\n",
 				StyleKey.Render("Space"),
 				StyleKey.Render("D"),
 				len(c.selectedSet),
@@ -453,7 +463,8 @@ func (c *ProjectScreen) View(width, height int) string {
 				StyleFaint.Render(scroll),
 			)
 		} else if w >= 60 {
-			fmt.Fprintf(&sb, "  [%s] %s open  %s %s %s back  %s help%s\n",
+			fmt.Fprintf(
+				&sb, "  [%s] %s open  %s %s %s back  %s help%s\n",
 				c.platformLabel(),
 				StyleKey.Render("Enter"),
 				StyleKey.Render("↑↓"),
@@ -463,7 +474,8 @@ func (c *ProjectScreen) View(width, height int) string {
 				StyleFaint.Render(scroll),
 			)
 		} else {
-			fmt.Fprintf(&sb, "  [%s] %s %s %s %s %s%s\n",
+			fmt.Fprintf(
+				&sb, "  [%s] %s %s %s %s %s%s\n",
 				c.platformLabel(),
 				StyleKey.Render("Enter"),
 				StyleKey.Render("↑↓"),

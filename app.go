@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -81,6 +82,9 @@ type App struct {
 		ProjectPath string
 		Pending     bool
 	}
+
+	// lastProjectPath 记录删除前所在的 project，用于删除后回到 session 列表
+	lastProjectPath string
 }
 
 func NewApp(scanners []Scanner, cfg AppConfig, version string) *App {
@@ -124,6 +128,25 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.phase = PhaseActive
 			cursorVisible = true
 			a.contextStack = []Screen{NewProjectScreen(a.projects, a.scanners)}
+
+			// 如果有 lastProjectPath，且该 project 仍然存在且有 session，进入 session 页面
+			if a.lastProjectPath != "" {
+				for i := range a.projects {
+					if a.projects[i].FullPath == a.lastProjectPath && len(a.projects[i].Sessions) > 0 {
+						installed := collectPlatforms(a.projects)
+						proj := a.projects[i]
+						sessions := make([]Session, len(proj.Sessions))
+						copy(sessions, proj.Sessions)
+						sort.Slice(sessions, func(i, j int) bool {
+							return sessions[i].LastActive.After(sessions[j].LastActive)
+						})
+						a.contextStack = append(a.contextStack,
+							NewSessionScreen(&proj, sessions, installed, a.scanners))
+						break
+					}
+				}
+				a.lastProjectPath = ""
+			}
 			return a, tea.Batch(CursorTick(), a.refreshTick())
 		}
 		return a, nil
@@ -143,6 +166,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case DeleteDoneMsg:
+		// 记住当前所在的 project 路径（从 context stack 中找到 SessionScreen）
+		a.lastProjectPath = ""
+		for i := len(a.contextStack) - 1; i >= 0; i-- {
+			if ss, ok := a.contextStack[i].(*SessionScreen); ok {
+				a.lastProjectPath = ss.project.FullPath
+				break
+			}
+		}
 		// pop + 重建 Context，确保数据同步
 		a.contextStack = nil
 		return a, a.deleteCmd(msg)

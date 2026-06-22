@@ -124,12 +124,20 @@ func (c *SessionScreen) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 		c.filter()
 
 	case "up", "k":
-		if c.cursor > 0 {
-			c.cursor--
+		if len(c.filtered) > 0 {
+			if c.cursor > 0 {
+				c.cursor--
+			} else {
+				c.cursor = len(c.filtered) - 1
+			}
 		}
 	case "down", "j":
-		if c.cursor < len(c.filtered)-1 {
-			c.cursor++
+		if len(c.filtered) > 0 {
+			if c.cursor < len(c.filtered)-1 {
+				c.cursor++
+			} else {
+				c.cursor = 0
+			}
 		}
 	case "g":
 		if len(c.filtered) > 0 {
@@ -440,7 +448,8 @@ func (c *SessionScreen) View(width, height int) string {
 	} else {
 		scroll := scrollHint(start, end, len(c.filtered), c.cursor)
 		if c.selecting {
-			fmt.Fprintf(&sb, "  %s toggle  %s delete(%d)  %s cancel%s\n",
+			fmt.Fprintf(
+				&sb, "  %s toggle  %s delete(%d)  %s cancel%s\n",
 				StyleKey.Render("Space"),
 				StyleKey.Render("D"),
 				len(c.selectedSet),
@@ -448,7 +457,8 @@ func (c *SessionScreen) View(width, height int) string {
 				StyleFaint.Render(scroll),
 			)
 		} else if w >= 60 {
-			fmt.Fprintf(&sb, "  [%s] %s resume  %s new  %s %s %s back  %s help%s\n",
+			fmt.Fprintf(
+				&sb, "  [%s] %s resume  %s new  %s %s %s back  %s help%s\n",
 				c.platformLabel(),
 				StyleKey.Render("Enter"),
 				StyleKey.Render("n"),
@@ -459,7 +469,8 @@ func (c *SessionScreen) View(width, height int) string {
 				StyleFaint.Render(scroll),
 			)
 		} else {
-			fmt.Fprintf(&sb, "  [%s] %s %s %s %s %s%s\n",
+			fmt.Fprintf(
+				&sb, "  [%s] %s %s %s %s %s%s\n",
 				c.platformLabel(),
 				StyleKey.Render("Enter"),
 				StyleKey.Render("n"),
@@ -543,12 +554,20 @@ func (c *AgentScreen) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "esc":
 		return PopCmd()
 	case "up", "k":
-		if c.cursor > 0 {
-			c.cursor--
+		if len(c.platforms) > 0 {
+			if c.cursor > 0 {
+				c.cursor--
+			} else {
+				c.cursor = len(c.platforms) - 1
+			}
 		}
 	case "down", "j":
-		if c.cursor < len(c.platforms)-1 {
-			c.cursor++
+		if len(c.platforms) > 0 {
+			if c.cursor < len(c.platforms)-1 {
+				c.cursor++
+			} else {
+				c.cursor = 0
+			}
 		}
 	case "enter":
 		if c.cursor >= 0 && c.cursor < len(c.platforms) {
@@ -612,7 +631,8 @@ func (c *AgentScreen) View(width, height int) string {
 	// Footer
 	sb.WriteString(StyleDivider.Render(strings.Repeat("─", w)) + "\n")
 	scroll := scrollHint(start, end, len(c.platforms), c.cursor)
-	fmt.Fprintf(&sb, "  %s select  %s %s back%s\n",
+	fmt.Fprintf(
+		&sb, "  %s select  %s %s back%s\n",
 		StyleKey.Render("Enter"),
 		StyleKey.Render("↑↓"),
 		StyleKey.Render("Esc"),
@@ -689,7 +709,8 @@ func (d *SessionDetail) View(width, height int) string {
 
 	sb.WriteString("\n")
 	sb.WriteString(StyleDivider.Render(strings.Repeat("─", width)) + "\n")
-	fmt.Fprintf(&sb, "  %s confirm  %s back\n",
+	fmt.Fprintf(
+		&sb, "  %s confirm  %s back\n",
 		StyleKey.Render("[Enter]"),
 		StyleKey.Render("[Esc]"),
 	)
