@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -364,6 +366,42 @@ func ScanProjectsParallel(scanners []Scanner) []Project {
 	wg.Wait()
 
 	return MergeProjects(all)
+}
+
+// resolveEncodedPath 将用 - 编码的路径解码为真实路径，通过检查文件系统是否存在。
+// 与简单的 - → / 替换不同：目录名本身可能包含 -（如 my-project），
+// 简单替换会错误地将其拆分为 my/project。
+// 该函数从 "/" 开始，逐步尝试 - 作为路径分隔符或目录名的一部分。
+func resolveEncodedPath(encoded string) string {
+	parts := strings.Split(encoded, "-")
+	if len(parts) == 0 {
+		return "/"
+	}
+	result := resolveFromDir("/", parts)
+	if result == "" {
+		// 无法通过文件系统解析，回退到简单替换
+		return "/" + strings.ReplaceAll(encoded, "-", "/")
+	}
+	return result
+}
+
+// resolveFromDir 从 baseDir 开始，尝试将 parts 中的 - 解释为路径分隔符或目录名的一部分。
+func resolveFromDir(baseDir string, parts []string) string {
+	if len(parts) == 0 {
+		return baseDir
+	}
+	// 尝试逐渐合并更多的 parts 作为单个目录名
+	for i := 1; i <= len(parts); i++ {
+		candidate := strings.Join(parts[:i], "-")
+		fullPath := filepath.Join(baseDir, candidate)
+		if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
+			result := resolveFromDir(fullPath, parts[i:])
+			if result != "" {
+				return result
+			}
+		}
+	}
+	return ""
 }
 
 // ProjectShortName 从绝对路径取最后两段作为短名。

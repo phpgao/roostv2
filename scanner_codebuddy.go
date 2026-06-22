@@ -83,28 +83,20 @@ func encodePath(path string) string {
 	return strings.ReplaceAll(path, "/", "-")
 }
 
-// decodeDirName 将 CodeBuddy 编码的目录名还原为真实路径
-// 策略：用 trustedDirs 做精确匹配（路径编码后与 encoded 比对），
-// 取最长匹配；无匹配时 fallback 为简单 - → / 替换
+// decodeDirName 将 CodeBuddy 编码的目录名还原为真实路径。
+// 策略：先用 trustedDirs 做精确匹配；若无匹配，通过文件系统实测解析。
 func (s *CodeBuddyScanner) decodeDirName(encoded string) string {
-	var bestMatch string
+	// 尝试从 trustedDirs 精确匹配
 	for _, dir := range s.trustedDirs {
-		enc := encodePath(dir)
-		if enc == encoded {
-			// 完全匹配，直接返回
+		if encodePath(dir) == encoded {
 			return dir
 		}
-		// 前缀匹配：encoded 以某个已知路径的编码开头
-		if strings.HasPrefix(encoded, enc+"-") || strings.HasPrefix(encoded, enc) {
-			if len(dir) > len(bestMatch) {
-				bestMatch = dir
-			}
-		}
 	}
-	if bestMatch != "" && encodePath(bestMatch) == encoded {
-		return bestMatch
+	// 通过文件系统解析（会正确处理目录名中的 - 字符）
+	if result := resolveEncodedPath(encoded); result != "" {
+		return result
 	}
-	// fallback：简单替换
+	// 最后回退：简单替换
 	return "/" + strings.ReplaceAll(encoded, "-", "/")
 }
 
@@ -131,6 +123,10 @@ func (s *CodeBuddyScanner) ScanProjects() ([]Project, error) {
 		if len(sessions) == 0 {
 			continue
 		}
+		// 用 session 中从 cwd 读取的精确路径覆盖从目录名解码的路径
+		if sessions[0].ProjectPath != "" {
+			fullPath = sessions[0].ProjectPath
+		}
 		projects = append(projects, Project{
 			Name:     ProjectShortName(fullPath),
 			FullPath: fullPath,
@@ -148,6 +144,7 @@ type cbLine struct {
 	AITitle      string          `json:"aiTitle"`
 	SessionID    string          `json:"sessionId"`
 	ProviderData json.RawMessage `json:"providerData"`
+	Cwd          string          `json:"cwd"` // 精确的项目路径，直接从这里取，无需解码目录名
 }
 
 type cbProviderData struct {
@@ -189,7 +186,7 @@ func (s *CodeBuddyScanner) parseSession(filePath, sid, encodedName, fullPath str
 		sizeBytes = info.Size()
 	}
 
-	var title, model, agentType string
+	var title, model, agentType, cwd string
 	var lastActive time.Time
 	msgCount := 0
 
@@ -199,6 +196,10 @@ func (s *CodeBuddyScanner) parseSession(filePath, sid, encodedName, fullPath str
 		var line cbLine
 		if err := json.Unmarshal(scanner.Bytes(), &line); err != nil {
 			continue
+		}
+		// 从第一条包含 cwd 的行获取精确的项目路径
+		if cwd == "" && line.Cwd != "" {
+			cwd = line.Cwd
 		}
 		// 时间戳（毫秒 Unix）
 		if line.Timestamp > 0 {
@@ -234,6 +235,12 @@ func (s *CodeBuddyScanner) parseSession(filePath, sid, encodedName, fullPath str
 		displayTitle = untitledTitle
 	}
 
+	// 优先使用从 JSONL 读取的 cwd 作为精确项目路径，兜底用目录名解码
+	projectPath := cwd
+	if projectPath == "" {
+		projectPath = fullPath
+	}
+
 	return Session{
 		ID:          sid,
 		Platform:    PlatformCodeBuddy,
@@ -246,7 +253,7 @@ func (s *CodeBuddyScanner) parseSession(filePath, sid, encodedName, fullPath str
 		ProjectDir:  encodedName,
 		FilePath:    filePath,
 		ResumeArg:   sid,
-		ProjectPath: fullPath,
+		ProjectPath: projectPath,
 	}, nil
 }
 

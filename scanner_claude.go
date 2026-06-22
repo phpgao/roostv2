@@ -77,12 +77,19 @@ func claudeEncodePath(path string) string {
 }
 
 func (s *ClaudeScanner) decodeDirName(encoded string) string {
+	// 从 knownPaths 精确匹配
 	for _, path := range s.knownPaths {
 		if claudeEncodePath(path) == encoded {
 			return path
 		}
 	}
+	// 去掉 Claude 特有的前缀 -
 	trimmed := strings.TrimPrefix(encoded, "-")
+	// 通过文件系统解析
+	if result := resolveEncodedPath(trimmed); result != "" {
+		return result
+	}
+	// 最后回退：简单替换（Claude 还将 . 和 _ 编码为 -，无法完全还原）
 	return "/" + strings.ReplaceAll(trimmed, "-", "/")
 }
 

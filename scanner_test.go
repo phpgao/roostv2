@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -118,5 +120,63 @@ func TestDefaultBin_AllPlatforms(t *testing.T) {
 		if bin == "" {
 			t.Errorf("DefaultBinFor(%s) is empty", p)
 		}
+	}
+}
+
+func TestResolveEncodedPath_simple(t *testing.T) {
+	// Create: /tmp/.../a/b/c
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "a", "b", "c"), 0o755)
+
+	// Encode /tmp/.../a/b/c as CodeBuddy would
+	encoded := encodePath(filepath.Join(dir, "a", "b", "c"))
+
+	result := resolveEncodedPath(encoded)
+	if result != filepath.Join(dir, "a", "b", "c") {
+		t.Errorf("resolveEncodedPath(%q) = %q, want %q", encoded, result, filepath.Join(dir, "a", "b", "c"))
+	}
+}
+
+func TestResolveEncodedPath_dirWithDash(t *testing.T) {
+	// Create: /tmp/.../STKE/tkex-quota  (directory name contains -)
+	dir := t.TempDir()
+	stkeDir := filepath.Join(dir, "STKE")
+	os.MkdirAll(filepath.Join(stkeDir, "tkex-quota"), 0o755)
+
+	encoded := encodePath(filepath.Join(stkeDir, "tkex-quota"))
+
+	result := resolveEncodedPath(encoded)
+	expected := filepath.Join(stkeDir, "tkex-quota")
+	if result != expected {
+		t.Errorf("resolveEncodedPath(%q) = %q, want %q\n  BUG: - in dir name was treated as /", encoded, result, expected)
+	}
+}
+
+func TestResolveEncodedPath_multipleDashDirs(t *testing.T) {
+	// Create: /tmp/.../a-b/c-d-e
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "a-b", "c-d-e"), 0o755)
+
+	encoded := encodePath(filepath.Join(dir, "a-b", "c-d-e"))
+
+	result := resolveEncodedPath(encoded)
+	expected := filepath.Join(dir, "a-b", "c-d-e")
+	if result != expected {
+		t.Errorf("resolveEncodedPath(%q) = %q, want %q", encoded, result, expected)
+	}
+}
+
+func TestResolveEncodedPath_notFound_fallback(t *testing.T) {
+	// Encoded path that doesn't exist on filesystem
+	result := resolveEncodedPath("Users-nonexistent-path")
+	if result != "/Users/nonexistent/path" {
+		t.Errorf("fallback should be simple replacement, got %q", result)
+	}
+}
+
+func TestResolveFromDir_empty(t *testing.T) {
+	result := resolveFromDir("/home", nil)
+	if result != "/home" {
+		t.Errorf("empty parts should return base dir, got %q", result)
 	}
 }
