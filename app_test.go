@@ -11,7 +11,6 @@ type mockScanner struct {
 	platform   Platform
 	deleted    []string // 被删除的 session ID 列表
 	projects   []Project
-	sessions   []Session
 	dataDir    string
 	customName string
 }

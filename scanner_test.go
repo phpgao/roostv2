@@ -126,7 +126,7 @@ func TestDefaultBin_AllPlatforms(t *testing.T) {
 func TestResolveEncodedPath_simple(t *testing.T) {
 	// Create: /tmp/.../a/b/c
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "a", "b", "c"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "a", "b", "c"), 0o755) //nolint:errcheck
 
 	// Encode /tmp/.../a/b/c as CodeBuddy would
 	encoded := encodePath(filepath.Join(dir, "a", "b", "c"))
@@ -141,7 +141,7 @@ func TestResolveEncodedPath_dirWithDash(t *testing.T) {
 	// Create: /tmp/.../STKE/tkex-quota  (directory name contains -)
 	dir := t.TempDir()
 	stkeDir := filepath.Join(dir, "STKE")
-	os.MkdirAll(filepath.Join(stkeDir, "tkex-quota"), 0o755)
+	os.MkdirAll(filepath.Join(stkeDir, "tkex-quota"), 0o755) //nolint:errcheck
 
 	encoded := encodePath(filepath.Join(stkeDir, "tkex-quota"))
 
@@ -155,7 +155,7 @@ func TestResolveEncodedPath_dirWithDash(t *testing.T) {
 func TestResolveEncodedPath_multipleDashDirs(t *testing.T) {
 	// Create: /tmp/.../a-b/c-d-e
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "a-b", "c-d-e"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "a-b", "c-d-e"), 0o755) //nolint:errcheck
 
 	encoded := encodePath(filepath.Join(dir, "a-b", "c-d-e"))
 

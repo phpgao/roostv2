@@ -9,9 +9,7 @@ import (
 
 func TestLoadConfig_Defaults(t *testing.T) {
 	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
+	t.Setenv("HOME", tmpDir)
 
 	// No config file → use defaults
 	cfg := LoadConfig()
@@ -35,11 +33,12 @@ func TestLoadConfig_Defaults(t *testing.T) {
 func TestLoadConfig_CustomAgents(t *testing.T) {
 	tmpDir := t.TempDir()
 	roostDir := filepath.Join(tmpDir, ".roost")
-	_ = os.MkdirAll(roostDir, 0o755)
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", os.Getenv("HOME"))
+	if err := os.MkdirAll(roostDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", tmpDir)
 
-	os.WriteFile(filepath.Join(roostDir, "roost.yaml"), []byte(`
+	if err := os.WriteFile(filepath.Join(roostDir, "roost.yaml"), []byte(`
 resume_mode: suspend
 platforms:
   codebuddy:
@@ -50,7 +49,9 @@ custom_agents:
     bin: claude-internal
     data_dir: .claude-internal
     args: [--dangerously-skip-permissions]
-`), 0o644)
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg := LoadConfig()
 	if cfg.ResumeMode != ResumeModeSuspend {
